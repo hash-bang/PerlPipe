@@ -1,0 +1,10 @@
+Package: pp
+Source: pp
+Version: $VERSION
+Architecture: any
+Maintainer: Matt Carter <m@ttcarter.com>
+Depends: perl (>= 5.10.0)
+Section: utils
+Priority: optional
+Homepage: https://github.com/hash-bang/PP
+Description: Small applet to provide access to Perl regular expressions.
