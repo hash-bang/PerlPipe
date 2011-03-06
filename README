@@ -1,0 +1,178 @@
+NAME
+    pp - Perl Pipe helper
+
+SYNOPSIS
+            pp <regexp...>
+
+QUICK EXAMPLES
+            # Perlish grep of STDIN
+            pp m/foo/
+
+            # Replace foo -> bar
+            pp s/foo/bar
+
+            # Combine the above examples, filter 'foo' and convert result into uppercase
+            pp m/foo/ s/b../\U\1\E/
+
+            # Extract only the matching portions from the input stream
+            pp m/^(b..)/
+
+            # Same as above but lazily assume brackets around everything.
+            pp -c m/b../
+
+            # Run STDIN though Perl function 'ucfirst'
+            pp ucfirst
+
+OPTIONS
+    -c
+    --capture
+            Only ouputs the matching portion of the final matching m//
+            expression. This is effectivly the same as enclosing the final
+            m// expression inside brackets.
+
+            These two functions are the same:
+
+                    echo 'foo bar baz' | pp m/(b..)/
+                    echo 'foo bar baz' | pp -c m/b../
+
+            In each case only the bracketed portion of the expression is
+            returned
+
+    -i
+    --nocase
+            Dont care about case sensitivity. This is effectivly the same as
+            ending every expression with the '/i' flag.
+
+    -j [string]
+    --join [string]
+            When using m// with brackets or in capture (-c) mode and the
+            expression has multiple captures, this specifies the speration
+            character. If unspecified the detault is a space.
+
+            For example:
+
+                    echo 'foo bar baz' | pp m/(b..) (b..)/ # Outputs 'bar baz'
+                    echo 'foo bar baz' | pp m/(b..) (b..)/ -j 'XXXX' # Outputs 'barXXXXbaz'
+
+    -0
+    --print0
+            Output a null character at the end of each line instead of the
+            usual line feed. This argument makes it easier to pass output
+            onto xargs in a safe way. e.g.
+
+                    ls | pp m/foo/ -0 | xargs -0 echo
+
+            Will output all files matching 'foo' in way that ensures files
+            with spaces in their names will not be ruined.
+
+    -v
+    --verbose
+            Be more verbose when outputting information to STDERR. Specify
+            multiple times to increase verbosity. This can be particularly
+            helpful when trying to debug why something isnt matching.
+
+DESCRIPTION
+    Run various output though a series of Perl regexps. This is really just
+    a helper for Perl regular expressions where we apply rules based on the
+    usual DWIM (Do What I Mean) philosophy. See the EXAMPLES section for
+    practical info.
+
+TYPES OF EXPRESSIONS
+    PP supports a variety of regular expresions. They all follow the usual
+    Perl format but can supply output in differnt ways. Generally speaking
+    PP will try to follow the principle of least astonishment whereby the
+    regexp *should* return what you wanted rather than what the technical
+    spec actually specifies.
+
+    Plain matching (m//)
+                m/foo/
+                m/foo/i
+                /foo/
+                /foo/i
+
+        Match 'foo' in the incomming stream. If 'i' is specified (or -i is
+        turned on) this is done case insensitively. The output is the entire
+        line of input - this is effectivly the same as a Perlish version of
+        grep.
+
+    Capturing - matching with brackets (m/()/)
+                m/(foo)/
+                m/(foo)/i
+                /(foo)/
+                /(foo)/i
+
+        Similar to the regular m// usage when any brackets are present in
+        the capture string PP goes into capture mode (same as specifying -c
+        for the regular m// syntax). In capture mode only the matching
+        portion of the string is output. The the above strings the only
+        possible output can be 'foo' (or however its cased in the '/i' flag
+        examples.
+
+    Subsitution (s///)
+                s/foo/bar/
+                s/foo/bar/i
+
+        Replaces any matched portions in the left and side with those in the
+        right in the form of a regular substitution. This can be combined
+        with the positional indicators (e.g. \1) to do something useful with
+        the input stream.
+
+        For example the following convers to upper case:
+
+                s/.*/\U\1/E/
+
+    Perl Functions
+                lc
+                lcfirst
+                length
+                reverse
+                uc
+                ucfirst
+
+        Runs the input stream though the named Perl function e.g.
+
+                pp ucfirst
+
+        Will capitalize all first letters in the input stream.
+
+        This functionality is really just a stub and might be expanded into
+        full CPAN module integration later on.
+
+EXAMPLES
+    pp s/foo/bar/
+        Replace 'foo' with 'bar' on the input stream.
+
+    echo 'foo-bar-baz' | pp m/BAR/i
+        Works just like grep with a Perl regexp, match the word BAR in a
+        case insensitive manner (same as -i).
+
+    echo 'foo-bar-baz' | pp m/b../
+        Same as above, this time matching only lines containing '/b../'.
+
+    echo 'foo-bar-baz' | pp m/b../ s/b(..)/\1/
+        Combines the above two examples.
+
+    echo 'foo-bar-baz' | pp m/(b..)/
+        Returns only 'bar' on the output stream. This is effectively the
+        same as 's/.*(b..).*/\1/g'
+
+    echo 'foo-bar-baz' | pp -c m/b../
+        Same result as above, when '-c' is specified PP acts as if brackets
+        were around everything.
+
+    echo 'foo-bar-baz' | pp m/(b..)/ s/.*/Prefix:\1:Suffix/
+        Captures only 'bar' from the above example but replaces it with
+        'Prefix:bar:Suffix'
+
+    echo 'foo-bar-baz' | pp uc'
+        Alternative 'cheap' way of doing capitalization using Perls in built
+        'uc' function.
+
+BUGS
+    Quite probably.
+
+    Please report to https://github.com/hash-bang/PP when found.
+
+AUTHOR
+    Matt Carter <m@ttcarter.com>
+
