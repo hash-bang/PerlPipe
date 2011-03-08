@@ -122,10 +122,13 @@ TYPES OF EXPRESSIONS
                 s/.*/\U\1/E/
 
     Perl Functions
+                basename
+                dirname
                 lc
                 lcfirst
                 length
                 reverse
+                trim
                 uc
                 ucfirst
 
