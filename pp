@@ -132,10 +132,13 @@ For example the following convers to upper case:
 
 =item B<Perl Functions>
 
+	basename
+	dirname
 	lc
 	lcfirst
 	length
 	reverse
+	trim
 	uc
 	ucfirst
 
@@ -230,10 +233,13 @@ sub say {
 }
 
 # Rather silly import of standard Perl functions so we can use referers (e.g. &$func) later on
+sub basename { s/^(.*\/)?(.*?)$/\2/g; $_ }
+sub dirname { s/^(.*)\/(.*?)?$/\1/g; $_ }
 sub lc { lc }
 sub lcfirst { lcfirst }
 sub length { length }
 sub reverse { reverse }
+sub trim { s/\s*(.*)\s*/\1/g; $_ }
 sub uc { uc }
 sub ucfirst { ucfirst }
 # }}} Functions 
@@ -267,7 +273,7 @@ GetOptions(
 			($nocase or $flags =~ /i/) ? qr/$exp/i : qr/$exp/, # FIXME: See above
 			$replace,
 		];
-	} elsif (m/^lc|lcfirst|length|reverse|uc|ucfirst$/) { # Use Perl function
+	} elsif (defined &{$_}) { # Use Perl function
 		$_ = [
 			FUNCT,
 			$_,
