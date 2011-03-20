@@ -1,4 +1,4 @@
-VERSION := $(shell git describe --match 'v[0-9].[0-9]' --tags --long | grep -Eo 'v[0-9]+\.[0-9]+-[0-9]+' | tr - . | cut -c 2-)
+VERSION := $(shell perl -MExtUtils::MakeMaker -le 'print MM->parse_version(shift)' pp)
 DEBFACTORY := DebFactory
 
 README: pp
@@ -22,6 +22,7 @@ deb:
 	mkdir $(DEBFACTORY)
 	mkdir -p $(DEBFACTORY)/usr/bin $(DEBFACTORY)/usr/share/man
 	cp -a pp $(DEBFACTORY)/usr/bin
+	cp -a docs $(DEBFACTORY)/usr/share/doc/pp
 	cp -ar Distro/DEBIAN $(DEBFACTORY)
 	perl -pi -e 's/\$$VERSION/$(VERSION)/' $(DEBFACTORY)/DEBIAN/control
 	pod2man pp $(DEBFACTORY)/usr/share/man/pp.1

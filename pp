@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# POD {{{
 =head1 NAME
 
 pp - Perl Pipe helper
@@ -26,6 +27,9 @@ pp - Perl Pipe helper
 
 	# Run STDIN though Perl function 'ucfirst'
 	pp ucfirst
+
+	# Run STDIN though the alias 'basename' specified in either /etc/pprc or ~/.pprc
+	pp basename
 
 =head1 OPTIONS
 
@@ -98,7 +102,7 @@ Generally speaking PP will try to follow the principle of least astonishment whe
 
 =over
 
-=item B<Plain matching (m//)>
+=item B<Matching (m//)>
 
 	m/foo/
 	m/foo/i
@@ -132,13 +136,10 @@ For example the following convers to upper case:
 
 =item B<Perl Functions>
 
-	basename
-	dirname
 	lc
 	lcfirst
 	length
 	reverse
-	trim
 	uc
 	ucfirst
 
@@ -150,7 +151,53 @@ Will capitalize all first letters in the input stream.
 
 This functionality is really just a stub and might be expanded into full CPAN module integration later on.
 
+
+=item B<Aliasing>
+
+Aliasing works in exactly the same way as the above functions except the actual operation of the alias is first looked up in the files specified in the FILES section.
+
+So
+	pp basename
+
+Makes pp look up what 'basename' specifies (hopefully something like 's/^(.*\/)?(.*?)$/\2/g') and simply replaces it with that value.
+
+See the example .pprc file included with this package for some handy examples.
+
 =back
+
+=head1 FILES
+
+=over 8
+
+=item B</etc/pprc>
+
+PP config file for all users.
+
+=item B<.pprc>
+
+PP config file for the local user.
+
+=back
+
+=head1 CONFIG
+
+The /etc/pprc and .pprc files will be processed to determine PP's configuration, the latter file taking precedence.
+
+An example layout for these files is as follows
+
+	[ALIASES]
+	trim = s/^\s*(.*)$/\1
+	foobar = s/foo/bar/
+
+In the above 'trim' is defined using the relevent regular expressions specified. These are used as if the user were entering these manually.
+
+So:
+
+	pp trim
+
+Actually becomes
+
+	pp s/^\s*(.*)$/\1
 
 =head1 EXAMPLES
 
@@ -201,8 +248,13 @@ Please report to https://github.com/hash-bang/PP when found.
 Matt Carter <m@ttcarter.com>
 
 =cut
+# }}} POD
+
+package pp;
+our $VERSION = '0.1.4';
 
 # Header {{{
+use Config::IniFiles;
 use IO::Handle;
 use Getopt::Long;
 Getopt::Long::Configure('bundling', 'ignorecase_always', 'pass_through');
@@ -233,16 +285,33 @@ sub say {
 }
 
 # Rather silly import of standard Perl functions so we can use referers (e.g. &$func) later on
-sub basename { s/^(.*\/)?(.*?)$/\2/g; $_ }
-sub dirname { s/^(.*)\/(.*?)?$/\1/g; $_ }
 sub lc { lc }
 sub lcfirst { lcfirst }
 sub length { length }
 sub reverse { reverse }
-sub trim { s/\s*(.*)\s*/\1/g; $_ }
 sub uc { uc }
 sub ucfirst { ucfirst }
 # }}} Functions 
+
+# Config loading {{{
+my $cfgfile;
+if (-e "/etc/pprc") {
+	$cfgfile = "/etc/pprc";
+} elsif (-e "$ENV{HOME}/.pprc") {
+	$cfgfile = "$ENV{HOME}/.pprc";
+} else {
+	say(1, "No PPRC file could be found at either /etc/pprc or \$HOME/.pprc");
+}
+
+my $cfg = Config::IniFiles->new(
+	-file => ($cfgfile ? $cfgfile : \*DATA), # Read defaults from __DATA__ section if we cant find a default file.
+	-default => 'aliases',
+	-fallback => 'aliases',
+	-nocase => 1,
+	-allowempty => 1,
+	-handle_trailing_comment => 1,
+);
+# }}} Config loading
 
 # Command line processing {{{
 our $verbose = 0;
@@ -260,14 +329,18 @@ GetOptions(
 @regs = map {
 	my $type, $qr;
 	say(2, "Processing regexp '$_'");
-	if (my($exp, $flags) = (m{^m?/(.*?)(?:/([a-z]*))?$})) { # Match syntax FIXME: This is a silly way of identifying a m//
+	if (my $alias = $cfg->val('aliases', $_, 0)) { # Is an alias
+		say(2, "Alias '$_' = $alias");
+		$_ = $alias;
+	}
+	if (my($exp, $flags) = (m{^m?/(.*?)(?:(?<=[^\\])/([a-z]*))?$})) { # Match syntax FIXME: This is a silly way of identifying a m//
 		$exp = "($exp)" if $capture; # Force brackets around expression if capture mode is on
 		$_ = [
 			MATCH,
 			($nocase or $flags =~ /i/) ? qr/$exp/i : qr/$exp/, # FIXME: There must be a better way of doing this on the fly. Why doesnt Perl seem to suppor qr/$foo/$bar ?,
 			($exp =~ /\(.*\)/), # Capture mode or the expression has brackets - do a capture
 		];
-	} elsif (my($exp, $replace, $flags) = (m{^s/(.*?)/(.*?)(?:/([a-z]*))?$})) { # Substitution syntax FIXME: This is a silly way
+	} elsif (my($exp, $replace, $flags) = (m{^s/(.*?)(?<=[^\\])/(.*?)(?:/([a-z]*))?$})) { # Substitution syntax FIXME: This is a silly way
 		$_ = [
 			SUBST,
 			($nocase or $flags =~ /i/) ? qr/$exp/i : qr/$exp/, # FIXME: See above
@@ -285,7 +358,6 @@ GetOptions(
 
 } @ARGV;
 # }}} Command line processing
-
 
 LINE: while (<STDIN>) {
 	chomp;
@@ -310,5 +382,13 @@ LINE: while (<STDIN>) {
 			$_ = &$regexp($_);
 		}
 	}
+	say(3, "Output: '$_'\n");
 	print $_,($print0 ? "\000" : "\n");
 }
+
+
+__DATA__
+[ALIASES]
+basename = s/^(.*\/)?(.*?)$/\2/g
+dirname = s/^(.*)\/(.*?)?$/\1/g
+trim = s/^\s*(.*?)\s*$/\1/g

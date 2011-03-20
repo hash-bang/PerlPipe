@@ -1,0 +1,4 @@
+[ALIASES]
+basename = s/^(.*\/)?(.*?)$/\2/g
+dirname = s/^(.*)\/(.*?)?$/\1/g
+trim = s/^\s*(.*?)\s*$/\1/g
