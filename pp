@@ -143,6 +143,12 @@ For example the following convers to upper case:
 	uc
 	ucfirst
 
+=item B<Convenience functions>
+
+	These functions may require additional Perl modules to be installed.
+
+	human (Number::Bytes::Human->format_bytes)
+
 Runs the input stream though the named Perl function e.g.
 
 	pp ucfirst
@@ -291,6 +297,13 @@ sub length { length }
 sub reverse { reverse }
 sub uc { uc }
 sub ucfirst { ucfirst }
+
+# Convenience wrappers
+sub human {
+	use Number::Bytes::Human qw/format_bytes/;
+	return format_bytes($_);
+}
+
 # }}} Functions 
 
 # Config loading {{{
@@ -330,14 +343,14 @@ GetOptions(
 	my $type, $qr;
 	say(2, "Processing regexp '$_'");
 	if (my $alias = $cfg->val('aliases', $_, 0)) { # Is an alias
-		say(2, "Alias '$_' = $alias");
+		say(2, "Import alias '$_' as '$alias'");
 		$_ = $alias;
 	}
 	if (my($exp, $flags) = (m{^m?/(.*?)(?:(?<=[^\\])/([a-z]*))?$})) { # Match syntax FIXME: This is a silly way of identifying a m//
 		$exp = "($exp)" if $capture; # Force brackets around expression if capture mode is on
 		$_ = [
 			MATCH,
-			($nocase or $flags =~ /i/) ? qr/$exp/i : qr/$exp/, # FIXME: There must be a better way of doing this on the fly. Why doesnt Perl seem to suppor qr/$foo/$bar ?,
+			($nocase or $flags =~ /i/) ? qr/$exp/i : qr/$exp/, # FIXME: There must be a better way of doing this on the fly. Why doesnt Perl seem to support qr/$foo/$bar ?,
 			($exp =~ /\(.*\)/), # Capture mode or the expression has brackets - do a capture
 		];
 	} elsif (my($exp, $replace, $flags) = (m{^s/(.*?)(?<=[^\\])/(.*?)(?:/([a-z]*))?$})) { # Substitution syntax FIXME: This is a silly way
@@ -385,7 +398,6 @@ LINE: while (<STDIN>) {
 	say(3, "Output: '$_'\n");
 	print $_,($print0 ? "\000" : "\n");
 }
-
 
 __DATA__
 [ALIASES]
