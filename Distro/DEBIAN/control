@@ -1,9 +1,9 @@
 Package: pp
 Source: pp
 Version: $VERSION
-Architecture: any
+Architecture: all
 Maintainer: Matt Carter <m@ttcarter.com>
-Depends: perl (>= 5.10.0)
+Depends: perl (>= 5.10.0), libconfig-inifiles-perl, libnumber-bytes-human-perl
 Section: utils
 Priority: optional
 Homepage: https://github.com/hash-bang/PP
